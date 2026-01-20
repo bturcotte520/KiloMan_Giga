@@ -58,6 +58,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const monstersRef = useRef<Matter.Body[]>([]);
   const monsterAIRef = useRef<Map<number, MonsterAIState>>(new Map());
   const monsterStyleSeedRef = useRef<Map<number, number>>(new Map());
+  const projectilesRef = useRef<Matter.Body[]>([]);
   const movingPlatformRef = useRef<Matter.Body | null>(null);
   const movingPlatformAIRef = useRef<{ originX: number; range: number; speed: number; dir: PatrolDirection } | null>(null);
   const jumpStrengthRef = useRef<number>(jumpStrength);
@@ -688,11 +689,54 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     // Capture keyboard immediately.
     queueMicrotask(() => containerRef.current?.focus());
 
+    // Projectile creation function
+    const createProjectile = () => {
+      if (!playerRef.current) return;
+
+      const player = playerRef.current;
+      const facing = playerFacingRef.current;
+      
+      // Create projectile
+      const projectile = Matter.Bodies.circle(
+        player.position.x + (facing * PLAYER_WIDTH * 0.6), 
+        player.position.y, 
+        6, 
+        {
+          density: 0.0001,
+          frictionAir: 0.01,
+          restitution: 0.5,
+          render: { 
+            fillStyle: '#00FF7A', 
+            strokeStyle: 'rgba(255, 255, 255, 0.8)', 
+            lineWidth: 2 
+          },
+          label: 'projectile',
+        }
+      );
+
+      // Set projectile velocity
+      Matter.Body.setVelocity(projectile, {
+        x: facing * 15,
+        y: 0,
+      });
+
+      // Add to world and track
+      Matter.World.add(engine.world, projectile);
+      projectilesRef.current.push(projectile);
+    };
+
     // Player movement controller
     Matter.Events.on(engine, 'beforeUpdate', () => {
       if (!playerRef.current) return;
 
       const player = playerRef.current;
+
+      // Fire projectile on K key press
+      if (keysRef.current['KeyK']) {
+        createProjectile();
+        // Prevent rapid firing by clearing the key state
+        keysRef.current['KeyK'] = false;
+      }
 
       // Ground check: short downward ray.
       const bodies = Matter.Composite.allBodies(engine.world);
@@ -822,6 +866,30 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       const pairs = event.pairs;
       
       pairs.forEach(pair => {
+        // Check if collision is between projectile and monster
+        const isProjectileA = pair.bodyA.label === 'projectile';
+        const isProjectileB = pair.bodyB.label === 'projectile';
+        const isMonsterA = pair.bodyA.label === 'monster';
+        const isMonsterB = pair.bodyB.label === 'monster';
+        
+        if ((isProjectileA && isMonsterB) || (isProjectileB && isMonsterA)) {
+          const projectile = isProjectileA ? pair.bodyA : pair.bodyB;
+          const monster = isProjectileA ? pair.bodyB : pair.bodyA;
+          
+          // Remove both from world
+          Matter.World.remove(engine.world, projectile);
+          Matter.World.remove(engine.world, monster);
+          
+          // Remove from tracking arrays
+          projectilesRef.current = projectilesRef.current.filter(p => p.id !== projectile.id);
+          monstersRef.current = monstersRef.current.filter(m => m.id !== monster.id);
+          monsterAIRef.current.delete(monster.id);
+          monsterStyleSeedRef.current.delete(monster.id);
+          
+          console.log('[DEBUG] Projectile hit monster - both removed');
+          return; // Skip further checks for this pair
+        }
+        
         // Check if collision involves player (torso or head) by checking ids
         const isPlayerTorso = pair.bodyA === torso || pair.bodyB === torso;
         const isPlayerHead = pair.bodyA === head || pair.bodyB === head;
@@ -1313,6 +1381,31 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       for (const m of monstersRef.current) {
         drawMonster(m, monsterAIRef.current.get(m.id), t, Math.max(scaleX, scaleY));
       }
+
+      // Draw projectiles
+      for (const p of projectilesRef.current) {
+        ctx.save();
+        ctx.translate(p.position.x, p.position.y);
+        
+        // Projectile glow
+        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+        glow.addColorStop(0, 'rgba(0, 255, 122, 0.8)');
+        glow.addColorStop(1, 'rgba(0, 255, 122, 0)');
+        ctx.fillStyle = glow;
+        ctx.fillRect(-8, -8, 16, 16);
+        
+        // Projectile core
+        ctx.fillStyle = '#00FF7A';
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.lineWidth = 2 / Math.max(scaleX, 1);
+        ctx.beginPath();
+        ctx.arc(0, 0, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+
       ctx.restore();
 
       // 2) Parallax background in screen space (behind everything)
@@ -1326,8 +1419,32 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.restore();
     });
 
-    // Track camera movement based on player position
+    // Track camera movement based on player position and cleanup projectiles
     Matter.Events.on(engine, 'afterUpdate', () => {
+      // Cleanup projectiles that go out of bounds
+      const currentTime = Date.now();
+      const bounds = {
+        left: 0,
+        right: LEVEL_LENGTH,
+        top: -200,
+        bottom: WORLD_HEIGHT + 200
+      };
+      
+      projectilesRef.current = projectilesRef.current.filter(p => {
+        // Check if projectile is out of bounds
+        const isOutOfBounds = 
+          p.position.x < bounds.left || 
+          p.position.x > bounds.right || 
+          p.position.y < bounds.top || 
+          p.position.y > bounds.bottom;
+          
+        if (isOutOfBounds) {
+          Matter.World.remove(engine.world, p);
+        }
+        
+        return !isOutOfBounds;
+      });
+
       if (playerRef.current) {
         // Player fall detection
         if (playerRef.current.position.y > WORLD_HEIGHT + 260 && gameStateRef.current === 'playing') {
