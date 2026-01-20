@@ -39,7 +39,7 @@ interface MonsterAIState {
 const GameCanvas: React.FC<GameCanvasProps> = ({
   width,
   height,
-  jumpStrength = 18,
+  jumpStrength = 22,
   jumpHeight,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
