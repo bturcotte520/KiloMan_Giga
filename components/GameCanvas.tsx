@@ -39,7 +39,7 @@ interface MonsterAIState {
 const GameCanvas: React.FC<GameCanvasProps> = ({
   width,
   height,
-  jumpStrength = 13,
+  jumpStrength = 18,
   jumpHeight,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -309,6 +309,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     const engine = Matter.Engine.create();
     // Keep AI-driven bodies updating even at low velocity (prevents patrols from going to sleep).
     engine.enableSleeping = false;
+    // Increase gravity for snappier, more responsive jump feel (faster fall)
+    engine.gravity.y = 1.8;
     engineRef.current = engine;
 
     // Create renderer with custom background
@@ -580,8 +582,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       density: 0.001,
       friction: 0,
       frictionStatic: 0,
-      frictionAir: 0.012,
-      restitution: 0.2,
+      frictionAir: 0.003, // Reduced air friction for cleaner jump arc
+      restitution: 0, // No bounce on landing for snappy feel
       render: { fillStyle: '#FF6B6B', strokeStyle: 'rgba(255, 215, 0, 0.45)', lineWidth: 2 },
       collisionFilter: {
         group: -1, // Negative group means bodies in the same group don't collide
@@ -598,8 +600,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       density: 0.001,
       friction: 0,
       frictionStatic: 0,
-      frictionAir: 0.012,
-      restitution: 0.2,
+      frictionAir: 0.003, // Reduced air friction for cleaner jump arc
+      restitution: 0, // No bounce on landing for snappy feel
       render: { fillStyle: '#FFD166', strokeStyle: 'rgba(255, 215, 0, 0.65)', lineWidth: 2 },
       collisionFilter: {
         group: -1, // Negative group means bodies in the same group don't collide
