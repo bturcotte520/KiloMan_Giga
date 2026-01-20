@@ -6,7 +6,7 @@ import GameCanvas from '@/components/GameCanvas';
 const GamePage: React.FC = () => {
   // Jump is a direct impulse (upward velocity) consumed by Matter on the next jump.
   // Range is tuned so low clears a small gap and high clears ~2–3 tiles.
-  const [jumpStrength, setJumpStrength] = useState<number>(13);
+  const [jumpStrength, setJumpStrength] = useState<number>(18);
 
   return (
     <div className="game-fullscreen">
