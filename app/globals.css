@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #000000;
+  --foreground: #ffd700;
 }
 
 @theme inline {
@@ -14,8 +14,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #000000;
+    --foreground: #ffd700;
   }
 }
 
@@ -23,4 +23,90 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  overflow: hidden; /* true fullscreen game feel */
+}
+
+/* Prevent browser gestures/scrolling while interacting with the game */
+.game-fullscreen,
+.game-fullscreen canvas {
+  touch-action: none;
+}
+
+/* Fullscreen game layout */
+.game-fullscreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+}
+
+.game-ui {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  width: min(420px, calc(100vw - 32px));
+}
+
+/* Custom game-specific styles */
+.game-container {
+  background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+  min-height: 100vh;
+}
+
+.game-header {
+  background: rgba(255, 215, 0, 0.1);
+  border-bottom: 2px solid #ffd700;
+  padding: 1rem;
+}
+
+.game-footer {
+  background: rgba(255, 215, 0, 0.1);
+  border-top: 2px solid #ffd700;
+  padding: 1rem;
+}
+
+/* Custom range slider for game controls */
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffd700;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ffd700;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+/* Game status overlay animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.game-overlay {
+  animation: fadeIn 0.3s ease-out;
 }
